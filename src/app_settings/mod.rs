@@ -24,12 +24,6 @@ pub fn load_or_create_settings() -> AppSettings {
     };
 
     if !path.exists() {
-        let mut f = fs::OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .open(path)
-            .unwrap()
-        ;
         println!("Введите публичный ключ");
         let mut binance_key = String::new();
         io::stdin().read_line(&mut binance_key).unwrap();
@@ -50,6 +44,12 @@ pub fn load_or_create_settings() -> AppSettings {
             binance_secret_key: binance_secret_key_encrypted,
         };
         let settings_str = serde_json::to_string_pretty(&settings_encrypted).unwrap();
+        let mut f = fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(path)
+            .unwrap()
+        ;
         let _r = f.write_all(settings_str.as_bytes());
     } else {
         let settings_str = fs::read_to_string(path).unwrap();
