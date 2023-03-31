@@ -26,23 +26,6 @@ pub struct BinanceAPI {
 }
 
 impl BinanceAPI {
-    pub async fn _get_server_time(&self) -> String {
-        let domain = &self.domain;
-        
-        let url = "/fapi/v1/time";
-        let r = self.client.get(format!("{domain}{url}"))
-            .send()
-            .await
-            .unwrap()
-            .text()
-            .await
-            .unwrap();
-
-        r
-    }
-}
-
-impl BinanceAPI {
     fn get_signature(&self, query_params: &Vec<(&str, &str)>) -> String {
         let mut query_params_for_sig_str = querystring::stringify(query_params.clone());
         query_params_for_sig_str = query_params_for_sig_str.trim_end_matches('&').to_string();
@@ -60,7 +43,7 @@ impl BinanceAPI {
         let domain = &self.domain;
         let url = "/fapi/v1/openOrders";
         
-        let ts = self::get_timestamp();
+        let ts = self.get_server_time().await;
         let ts_str = ts.to_string();
     
         let mut query_params = vec![
@@ -82,18 +65,6 @@ impl BinanceAPI {
             .unwrap();
 
         rj
-
-        // As string debug
-        // let r = client.get(format!("{domain}{url}"))
-        //     .header("X-MBX-APIKEY", self.key.as_str())
-        //     .query::<Vec<(&str, &str)>>(&query_params)
-        //     .send()
-        //     .await
-        //     .unwrap()
-        //     .text()
-        //     .await
-        //     .unwrap();
-        //    
     }
 }
 
@@ -102,7 +73,7 @@ impl BinanceAPI {
         let domain = &self.domain;
         let url = "/fapi/v1/allOpenOrders ";
         
-        let ts = self::get_timestamp();
+        let ts = self.get_server_time().await;
         let ts_str = ts.to_string();
 
         let mut query_params = vec![
@@ -126,6 +97,31 @@ impl BinanceAPI {
 }
 
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerTimeResponse {
+    pub server_time: u128
+}
+
+impl BinanceAPI {
+    pub async fn get_server_time(&self) -> u128 {
+        let domain = &self.domain;
+        let url = "/fapi/v1/time";
+
+        let response = self.client.get(format!("{domain}{url}"))
+            .header("X-MBX-APIKEY", self.key.as_str())
+            .send()
+            .await
+            .unwrap()
+            .json::<ServerTimeResponse>()
+            .await
+            .unwrap()
+        ;
+
+        return response.server_time;
+    }
+}
+
 pub fn new(key: String, secret_key: String) -> BinanceAPI {
     BinanceAPI { 
         key, 
@@ -135,7 +131,7 @@ pub fn new(key: String, secret_key: String) -> BinanceAPI {
     }
 }
 
-fn get_timestamp() -> u128 {
+fn _get_os_timestamp() -> u128 {
     let start = SystemTime::now();
     let since_the_epoch = start
         .duration_since(UNIX_EPOCH)
